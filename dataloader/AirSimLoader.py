@@ -5,9 +5,8 @@ import torch
 import torchvision.transforms as transforms
 import random
 from PIL import Image, ImageOps
-import preprocess 
-import listflowfile as lt
-import readpfm as rp
+import dataloader.preprocess as pp
+import dataloader.readpfm as rp
 import numpy as np
 
 IMG_EXTENSIONS = [
@@ -22,10 +21,10 @@ def default_loader(path):
     return Image.open(path).convert('RGB')
 
 def disparity_loader(path):
-    return rp.readPFM(path)
+    return rp.readPFM(path,False) #Don't flip pfm
 
 
-class myImageFloder(data.Dataset):
+class myImageLoader(data.Dataset):
     def __init__(self, left, right, left_disparity, training, loader=default_loader, dploader= disparity_loader):
  
         self.left = left
@@ -60,7 +59,7 @@ class myImageFloder(data.Dataset):
 
            dataL = dataL[y1:y1 + th, x1:x1 + tw]
 
-           processed = preprocess.get_transform(augment=False)  
+           processed = pp.get_transform(augment=False)  
            left_img   = processed(left_img)
            right_img  = processed(right_img)
 
@@ -69,7 +68,7 @@ class myImageFloder(data.Dataset):
            w, h = left_img.size
            left_img = left_img.crop((w-960, h-544, w, h))
            right_img = right_img.crop((w-960, h-544, w, h))
-           processed = preprocess.get_transform(augment=False)  
+           processed = pp.get_transform(augment=False)  
            left_img       = processed(left_img)
            right_img      = processed(right_img)
 

@@ -28,7 +28,7 @@ parser.add_argument('--model', default='stackhourglass',
                     help='select model')
 parser.add_argument('--datatype', default='2015',
                     help='datapath')
-parser.add_argument('--datapath', default='/media/jiaren/ImageNet/data_scene_flow_2015/training/',
+parser.add_argument('--datapath', default='C:/Github/PSMNet/data_scene_flow/training/',
                     help='datapath')
 parser.add_argument('--epochs', type=int, default=300,
                     help='number of epochs to train')
@@ -54,11 +54,11 @@ elif args.datatype == '2012':
 all_left_img, all_right_img, all_left_disp, test_left_img, test_right_img, test_left_disp = ls.dataloader(args.datapath)
 
 TrainImgLoader = torch.utils.data.DataLoader(
-         DA.myImageFloder(all_left_img,all_right_img,all_left_disp, True), 
+         DA.myImageLoader(all_left_img,all_right_img,all_left_disp, True), 
          batch_size= 12, shuffle= True, num_workers= 8, drop_last=False)
 
 TestImgLoader = torch.utils.data.DataLoader(
-         DA.myImageFloder(test_left_img,test_right_img,test_left_disp, False), 
+         DA.myImageLoader(test_left_img,test_right_img,test_left_disp, False), 
          batch_size= 8, shuffle= False, num_workers= 4, drop_last=False)
 
 if args.model == 'stackhourglass':

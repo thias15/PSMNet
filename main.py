@@ -13,16 +13,18 @@ import torch.nn.functional as F
 import numpy as np
 import time
 import math
-from dataloader import listflowfile as lt
-from dataloader import SecenFlowLoader as DA
+#from dataloader import listflowfile as lt
+#from dataloader import SceneFlowLoader as DA
+from dataloader import AirSimTrainFiles as lt
+from dataloader import AirSimLoader as DA
 from models import *
 
 parser = argparse.ArgumentParser(description='PSMNet')
 parser.add_argument('--maxdisp', type=int ,default=192,
                     help='maxium disparity')
-parser.add_argument('--model', default='stackhourglass',
+parser.add_argument('--model', default='basic',
                     help='select model')
-parser.add_argument('--datapath', default='/media/jiaren/ImageNet/SceneFlowData/',
+parser.add_argument('--datapath', default='D:/Downloads/AirSim/',
                     help='datapath')
 parser.add_argument('--epochs', type=int, default=10,
                     help='number of epochs to train')
@@ -44,12 +46,12 @@ if args.cuda:
 all_left_img, all_right_img, all_left_disp, test_left_img, test_right_img, test_left_disp = lt.dataloader(args.datapath)
 
 TrainImgLoader = torch.utils.data.DataLoader(
-         DA.myImageFloder(all_left_img,all_right_img,all_left_disp, True), 
-         batch_size= 12, shuffle= True, num_workers= 8, drop_last=False)
+         DA.myImageLoader(all_left_img,all_right_img,all_left_disp, True), 
+         batch_size= 3, shuffle= True, num_workers= 4, drop_last=False)
 
 TestImgLoader = torch.utils.data.DataLoader(
-         DA.myImageFloder(test_left_img,test_right_img,test_left_disp, False), 
-         batch_size= 8, shuffle= False, num_workers= 4, drop_last=False)
+         DA.myImageLoader(test_left_img,test_right_img,test_left_disp, False), 
+         batch_size= 3, shuffle= False, num_workers= 4, drop_last=False)
 
 
 if args.model == 'stackhourglass':
@@ -133,46 +135,48 @@ def adjust_learning_rate(optimizer, epoch):
 
 
 def main():
+    best_test_loss = 100
+    best_epoch = 0
+    
+    start_full_time = time.time()
+    for epoch in range(1, args.epochs+1):
+       print('This is %d-th epoch' %(epoch))
+       total_train_loss = 0
+       adjust_learning_rate(optimizer,epoch)
 
-	start_full_time = time.time()
-	for epoch in range(1, args.epochs+1):
-	   print('This is %d-th epoch' %(epoch))
-	   total_train_loss = 0
-	   adjust_learning_rate(optimizer,epoch)
+       ## training ##
+       for batch_idx, (imgL_crop, imgR_crop, disp_crop_L) in enumerate(TrainImgLoader):
+           start_time = time.time()
+           loss = train(imgL_crop,imgR_crop, disp_crop_L)
+           print('Iter %d training loss = %.3f , time = %.2f' %(batch_idx, loss, time.time() - start_time))
+           total_train_loss += loss
+       print('epoch %d total training loss = %.3f' %(epoch, total_train_loss/len(TrainImgLoader)))
 
-	   ## training ##
-	   for batch_idx, (imgL_crop, imgR_crop, disp_crop_L) in enumerate(TrainImgLoader):
-	     start_time = time.time()
+       #SAVE
+       savefilename = args.savemodel+'/checkpoint_'+str(epoch)+'.tar'
+       torch.save({
+            'epoch': epoch,
+            'state_dict': model.state_dict(),
+                    'train_loss': total_train_loss/len(TrainImgLoader),}, savefilename)
+       #------------- TEST ------------------------------------------------------------
+       total_test_loss = 0
+       for batch_idx, (imgL, imgR, disp_L) in enumerate(TestImgLoader):
+           test_loss = test(imgL,imgR, disp_L)
+           print('Iter %d test loss = %.3f' %(batch_idx, test_loss))
+           total_test_loss += test_loss
+       if (total_test_loss < best_test_loss):
+           best_test_loss = total_test_loss
+           best_epoch = epoch
+       print('total test loss = %.3f, best test loss = %.3f (epoch %d)' %((total_test_loss/len(TestImgLoader)), (best_test_loss/len(TestImgLoader)), best_epoch))
+       #----------------------------------------------------------------------------------
+    
+    print('full training time = %.2f HR' %((time.time() - start_full_time)/3600))
 
-	     loss = train(imgL_crop,imgR_crop, disp_crop_L)
-	     print('Iter %d training loss = %.3f , time = %.2f' %(batch_idx, loss, time.time() - start_time))
-	     total_train_loss += loss
-	   print('epoch %d total training loss = %.3f' %(epoch, total_train_loss/len(TrainImgLoader)))
-
-	   #SAVE
-	   savefilename = args.savemodel+'/checkpoint_'+str(epoch)+'.tar'
-	   torch.save({
-		    'epoch': epoch,
-		    'state_dict': model.state_dict(),
-                    'train_loss': total_train_loss/len(TrainImgLoader),
-		}, savefilename)
-
-	print('full training time = %.2f HR' %((time.time() - start_full_time)/3600))
-
-	#------------- TEST ------------------------------------------------------------
-	total_test_loss = 0
-	for batch_idx, (imgL, imgR, disp_L) in enumerate(TestImgLoader):
-	       test_loss = test(imgL,imgR, disp_L)
-	       print('Iter %d test loss = %.3f' %(batch_idx, test_loss))
-	       total_test_loss += test_loss
-
-	print('total test loss = %.3f' %(total_test_loss/len(TestImgLoader)))
-	#----------------------------------------------------------------------------------
-	#SAVE test information
-	savefilename = args.savemodel+'testinformation.tar'
-	torch.save({
-		    'test_loss': total_test_loss/len(TestImgLoader),
-		}, savefilename)
+    ##SAVE test information
+    #savefilename = args.savemodel+'/testinformation.tar'
+    #torch.save({
+    #        'test_loss': total_test_loss/len(TestImgLoader),
+    #    }, savefilename)
 
 
 if __name__ == '__main__':

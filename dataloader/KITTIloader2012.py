@@ -16,11 +16,11 @@ def is_image_file(filename):
 
 def dataloader(filepath):
 
-  left_fold  = 'colored_0/'
-  right_fold = 'colored_1/'
-  disp_noc   = 'disp_occ/'
+  left_fold  = 'left/' #'colored_0/'
+  right_fold = 'right' #'colored_1/'
+  disp_noc   = 'disparity_gt' #'disp_occ/'
 
-  image = [img for img in os.listdir(filepath+left_fold) if img.find('_10') > -1]
+  image = [img for img in os.listdir(filepath+left_fold)] # if img.find('_10') > -1]
 
   train = image[:]
   val   = image[160:]

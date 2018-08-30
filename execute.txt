@@ -1,0 +1,14 @@
+#Test
+python submission.py --maxdisp 192 --model stackhourglass --dataset KITTI15 --datapath "D:/Data/Kitti/2015/training/" --loadmodel models/pretrained_model_KITTI2015.tar
+python submission.py --maxdisp 192 --model stackhourglass --dataset KITTI15 --datapath "D:/Data/Kitti/2015/testing/" --loadmodel models/pretrained_model_KITTI2015.tar
+python submission.py --maxdisp 192 --model stackhourglass --dataset KITTI12 --datapath "D:/Data/Kitti/2012/training/" --loadmodel models/pretrained_model_KITTI2015.tar
+python submission.py --maxdisp 192 --model stackhourglass --dataset KITTI12 --datapath "D:/Data/Kitti/2012/testing/" --loadmodel models/pretrained_model_KITTI2015.tar
+
+
+python submission.py --maxdisp 192 --model stackhourglass --dataset KITTI15 --datapath "C:/Github/PSMNet/data_scene_flow/training/" --loadmodel models/pretrained_model_KITTI2015.tar
+python submission.py --maxdisp 192 --model basic --dataset "AirSim" --datapath "D:/Downloads/AirSim/" --loadmodel models/airsim/basic_50.tar
+
+#Train
+python main.py --maxdisp 192 --model basic --datapath "D:/Downloads/Data/" --epochs 10 --savemodel "C:/Github/PSMNet/models/airsim"
+
+python main.py --maxdisp 192 --model basic --datapath "D:/Downloads/AirSim/" --epochs 50 --savemodel "C:/Github/PSMNet/models/airsim"

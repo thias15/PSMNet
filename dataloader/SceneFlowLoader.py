@@ -5,8 +5,10 @@ import torch
 import torchvision.transforms as transforms
 import random
 from PIL import Image, ImageOps
+import dataloader.preprocess as pp
+import dataloader.listflowfile as lt
+import dataloader.readpfm as rp
 import numpy as np
-import preprocess 
 
 IMG_EXTENSIONS = [
     '.jpg', '.JPG', '.jpeg', '.JPEG',
@@ -20,7 +22,7 @@ def default_loader(path):
     return Image.open(path).convert('RGB')
 
 def disparity_loader(path):
-    return Image.open(path)
+    return rp.readPFM(path)
 
 
 class myImageLoader(data.Dataset):
@@ -38,9 +40,12 @@ class myImageLoader(data.Dataset):
         right = self.right[index]
         disp_L= self.disp_L[index]
 
+
         left_img = self.loader(left)
         right_img = self.loader(right)
-        dataL = self.dploader(disp_L)
+        dataL, scaleL = self.dploader(disp_L)
+        dataL = np.ascontiguousarray(dataL,dtype=np.float32)
+
 
 
         if self.training:  
@@ -53,25 +58,18 @@ class myImageLoader(data.Dataset):
            left_img = left_img.crop((x1, y1, x1 + tw, y1 + th))
            right_img = right_img.crop((x1, y1, x1 + tw, y1 + th))
 
-           dataL = np.ascontiguousarray(dataL,dtype=np.float32)/256
            dataL = dataL[y1:y1 + th, x1:x1 + tw]
 
-           processed = preprocess.get_transform(augment=False)  
+           processed = pp.get_transform(augment=False)  
            left_img   = processed(left_img)
            right_img  = processed(right_img)
 
            return left_img, right_img, dataL
         else:
            w, h = left_img.size
-
-           left_img = left_img.crop((w-1232, h-368, w, h)) #1242x375 -> 1248x384
-           right_img = right_img.crop((w-1232, h-368, w, h))
-           w1, h1 = left_img.size
-
-           dataL = dataL.crop((w-1232, h-368, w, h))
-           dataL = np.ascontiguousarray(dataL,dtype=np.float32)/256
-
-           processed = preprocess.get_transform(augment=False)  
+           left_img = left_img.crop((w-960, h-544, w, h))
+           right_img = right_img.crop((w-960, h-544, w, h))
+           processed = pp.get_transform(augment=False)  
            left_img       = processed(left_img)
            right_img      = processed(right_img)
 
