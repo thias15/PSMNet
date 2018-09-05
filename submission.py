@@ -31,7 +31,7 @@ parser.add_argument('--loadmodel', default=None,
 parser.add_argument('--model', default='stackhourglass',
                     help='select model')
 parser.add_argument('--maxdisp', type=int, default=192,
-                    help='maxium disparity')
+                    help='maximum disparity')
 parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='enables CUDA training')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
@@ -46,12 +46,14 @@ if args.cuda:
 if 'KITTI' in args.dataset:
    from dataloader import KITTI_submission_loader as DA
 elif args.dataset == 'AirSim':
-   from dataloader import AirSimTrainFiles as DA
+   from dataloader import AirSimFiles as DA
+elif args.dataset == 'SceneFlow':
+   from dataloader import SceneFlowFiles as DA
 
-if args.dataset != 'AirSim':
+if 'KITTI' in args.dataset:
     test_left_img, test_right_img = DA.dataloader(args.datapath)
 else:
-    test_left_img, test_right_img, _, _, _, _ = DA.dataloader(args.datapath)   
+    test_left_img, test_right_img, _, _, _, _ = DA.dataloader(args.datapath)
 
 if args.model == 'stackhourglass':
     model = stackhourglass(args.maxdisp)
@@ -76,8 +78,7 @@ def test(imgL,imgR):
            imgL = torch.FloatTensor(imgL).cuda()
            imgR = torch.FloatTensor(imgR).cuda()     
 
-        imgL, imgR= Variable(imgL), Variable(imgR)
-
+        imgL, imgR
         with torch.no_grad():
             output = model(imgL,imgR)
         output = torch.squeeze(output)
@@ -88,8 +89,8 @@ def test(imgL,imgR):
 
 def main():
    processed = preprocess.get_transform(augment=False)
-
-   for inx in range(len(test_left_img)):
+   num_imgs = len(test_left_img)
+   for inx in range(num_imgs):
 
        imgL_o = (skimage.io.imread(test_left_img[inx]).astype('float32'))
        imgR_o = (skimage.io.imread(test_right_img[inx]).astype('float32'))
@@ -98,25 +99,45 @@ def main():
        imgL = np.reshape(imgL,[1,3,imgL.shape[1],imgL.shape[2]])
        imgR = np.reshape(imgR,[1,3,imgR.shape[1],imgR.shape[2]])
 
-       if args.dataset != 'AirSim':
-       # pad to (384, 1248)
+       if 'KITTI' in args.dataset:
+           # pad to (384, 1248)
            top_pad = 384-imgL.shape[2]
            left_pad = 1248-imgL.shape[3]
+           imgL = np.lib.pad(imgL,((0,0),(0,0),(top_pad,0),(0,left_pad)),mode='constant',constant_values=0)
+           imgR = np.lib.pad(imgR,((0,0),(0,0),(top_pad,0),(0,left_pad)),mode='constant',constant_values=0)
+       else:
+           # pad to (576, 960)
+           top_pad = 576-imgL.shape[2]
+           left_pad = 960-imgL.shape[3]
            imgL = np.lib.pad(imgL,((0,0),(0,0),(top_pad,0),(0,left_pad)),mode='constant',constant_values=0)
            imgR = np.lib.pad(imgR,((0,0),(0,0),(top_pad,0),(0,left_pad)),mode='constant',constant_values=0)
 
        start_time = time.time()
        pred_disp = test(imgL,imgR)
-       print('time = %.2f' %(time.time() - start_time))
-       
-       if args.dataset != 'AirSim':
+       print('processed %d/%d, time = %.2f' %(inx, num_imgs, time.time() - start_time))
+
+       if 'KITTI' in args.dataset:
+           # crop to original size
            top_pad   = 384-imgL_o.shape[0]
            left_pad  = 1248-imgL_o.shape[1]
            img = pred_disp[top_pad:,:-left_pad]
        else:
-           img = pred_disp
+           # crop to original size
+           top_pad   = 576-imgL_o.shape[0]
+           #left_pad = 960 - imgL_o.shape[1]
+           img = pred_disp[top_pad:,:]
+           #img = pred_disp
           
-       skimage.io.imsave(test_left_img[inx].replace("\\","/").split('/')[-1],(img*256).astype('uint16'))
+
+       path = os.path.join(*test_left_img[inx].replace("\\", "/").split('/')[:-2], 'disparity_psm')
+       file = test_left_img[inx].replace("\\", "/").split('/')[-1]
+
+       if not os.path.exists(path):
+           os.makedirs(path)
+       skimage.io.imsave(os.path.join(path,file), (img * 256).astype('uint16'))
+
+       #skimage.io.imsave(file, (img * 256).astype('uint16'))
+
 
 if __name__ == '__main__':
    main()
