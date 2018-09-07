@@ -54,6 +54,7 @@ if 'KITTI' in args.dataset:
     test_left_img, test_right_img = DA.dataloader(args.datapath)
 else:
     test_left_img, test_right_img, _, _, _, _ = DA.dataloader(args.datapath)
+    #_, _, _, test_left_img, test_right_img, _ = DA.dataloader(args.datapath)
 
 if args.model == 'stackhourglass':
     model = stackhourglass(args.maxdisp)
